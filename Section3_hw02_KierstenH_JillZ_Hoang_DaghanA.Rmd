@@ -1,0 +1,13 @@
+---
+title: "W271 Section 3 Lab 2"
+author: "Kiersten Henderson, Jill Zhang, Hoang Phan, Daghan Altas"
+date: "10/11/2017"
+output: pdf_document
+---
+
+```{r setup, warning=FALSE}
+knitr::opts_chunk$set(cache=TRUE)
+library(knitr)
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+```
+
