@@ -2,7 +2,9 @@
 title: "W271 Section 3 Lab 2"
 author: "Kiersten Henderson, Jill Zhang, Hoang Phan, Daghan Altas"
 date: "10/11/2017"
-output: pdf_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, warning=FALSE}
@@ -11,3 +13,70 @@ library(knitr)
 opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
 ```
 
+#1 Introduction  
+An introduction to the project, which should include a concise summary of the key results as well as techniques you used in your final model.
+
+#2 Exploratory Data Analysis
+```{r}
+library(dplyr)
+library(ggplot2)
+library(Hmisc)
+library(GGally)
+library(data.table)
+library(stargazer)
+
+if (dir.exists("XXXX")) {
+  ## For Kiersten
+  setwd("XXXX")
+} else if (dir.exists("YYY")) {
+  ## For Jill
+  setwd("YYY")
+} else if (dir.exists("ZZZ")) {
+  ## For Hoang
+  setwd("ZZZ")
+} else {
+  ## For Daghan
+  setwd("/Users/daghanaltas/Hacking/Berkeley/W271/Labs/w271_lab2/")
+}
+ 
+df <- read.csv("./lab2data.csv")
+dt <- data.table(df)
+head(dt)
+describe(dt)
+```
+## Todo
+
+* Missing values (NAs)?
+* Create factor variables for Gender, Marital Status, Class year, Major, Next.Degree, 
+
+
+#3 Statistical Modeling  
+Questions to answer: 
+
+* Start the section summarizing the key results - what variables, if any, are the key predictors of the year 2016 contribution? 
+* What are the key techniques you have experimented? 
+* What method did you use in your final model? 
+* How did you choose the final model? 
+* What model performance criteria did you use to choose the final model? 
+* What statistical inference did you perform? Explain them. 
+* Comment on statistical significance vs. economic significance.
+
+#4 Final Remarks  
+Questions to answer:  
+
+* What are your departing thoughts? 
+* What are the strengths and weaknesses in your analysis? 
+* Should the administration trust your result? 
+* Are there subsample in your sample that your model did a bad job in predicting their contribution behavior?
+    + If so, why? 
+* Are there other “things”, a wish list, that you think can be used to improve your model?
+    + If so, what are they?
+* Perhaps you can make a suggestion to the administration to collect those information in the future.
+
+
+
+
+
+
+```{r}
+```
