@@ -210,14 +210,14 @@ The data is impressively clear. Married and single people are biggest source of 
 
 ###2.4.4 FY16Giving.Grouped vs. Major and Grouped.Major
 ```{r}
-mosaic(~ FY16Giving.Grouped + Major, data = givings,
-       highlighting = "Major", highlighting_fill =c("pink", "lightblue", "yellow", "orange"),
-       labeling= labeling_border(rot_labels = c(0,0)))
-xtabs(~ FY16Giving.Grouped + Major, data = givings)
-mosaic(~ FY16Giving.Grouped + Grouped.Major, data = givings,
-       highlighting = "Grouped.Major", highlighting_fill =c("pink", "lightblue", "yellow", "orange"),
-       labeling= labeling_border(rot_labels = c(0,0)))
-xtabs(~ FY16Giving.Grouped + Grouped.Major, data = givings)
+#mosaic(~ FY16Giving.Grouped + Major, data = givings,
+#       highlighting = "Major", highlighting_fill =c("pink", "lightblue", "yellow", "orange"),
+#       labeling= labeling_border(rot_labels = c(0,0)))
+#xtabs(~ FY16Giving.Grouped + Major, data = givings)
+#mosaic(~ FY16Giving.Grouped + Grouped.Major, data = givings,
+#       highlighting = "Grouped.Major", highlighting_fill =c("pink", "lightblue", "yellow", "orange"),
+#       labeling= labeling_border(rot_labels = c(0,0)))
+#xtabs(~ FY16Giving.Grouped + Grouped.Major, data = givings)
 ```
 This data will change after Jill's update, skipping for now
 
