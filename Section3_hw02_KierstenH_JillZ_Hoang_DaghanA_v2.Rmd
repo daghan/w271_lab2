@@ -212,7 +212,7 @@ mosaic(~ FY16Giving.Grouped + Marital.Status, data = givings,
        labeling= labeling_border(rot_labels = c(0,0)))
 xtabs(~ FY16Giving.Grouped + Marital.Status, data = givings)
 ```
-The data is impressively clear. Married and single people are biggest source of donations. **We expect Marital.Status to be a significant explanatory variable in our final model.**
+The data is impressively clear. Married and single people are biggest source of donations. We expect Marital.Status to be a significant explanatory variable in our final model.
 
 ###2.4.4 FY16Giving.Grouped vs. Major
 ```{r}
@@ -241,11 +241,11 @@ For the highest donation bracket, the more than 50% of the donations are coming 
 ```{r}
 givings$High.Donor.Major <- ifelse(givings$Major %in% c("History","Psychology","Biology", "Economics"),TRUE,FALSE)
 ```
-This data will change after Jill's update, skipping for now
+We are going to explore if the newly created variable helps us improve the accuracy of our multinomial regression model. 
 
 
 ###2.4.5 FY16Giving.Grouped vs. Next.Degree
-This data will change after Jill's update, skipping for now
+skipping for now
 
 ###2.4.6 FY16Giving.Grouped vs. AttendenceEvent
 ```{r}
@@ -254,7 +254,7 @@ mosaic(~ FY16Giving.Grouped + AttendenceEvent, data = givings,
        labeling= labeling_border(rot_labels = c(0,0)))
 xtabs(~ FY16Giving.Grouped + AttendenceEvent, data = givings)
 ```
-The data is inline with our expectations. Among the people who donate, there is a strong correlation between attendence and donations. In fact, most of the top donors (85%) have attended an Alumni event. **We'll include AttendenceEvent in our model exploration.**
+The data is inline with our expectations. Among the people who donate, there is a strong correlation between attendence and donations. In fact, most of the top donors (85%) have attended an Alumni event.
 
 ###2.4.7 FY16Giving.Grouped vs. previous years' Donation levels
 
