@@ -69,6 +69,11 @@ levels(givings$Gender)  = c("Female", "Male")
 givings$AttendenceEvent = factor(givings$AttendenceEvent, levels = c(0,1), labels = c("Didn't Attend", "Attended"))
 levels(givings$Marital.Status) = c("Divorced", "Married", "Single", "Widowed")
 givings$Class.Year = factor(givings$Class.Year)
+givings$FY12Giving = as.numeric(givings$FY12Giving)
+givings$FY13Giving = as.numeric(givings$FY13Giving)
+givings$FY14Giving = as.numeric(givings$FY14Giving)
+givings$FY15Giving = as.numeric(givings$FY15Giving)
+givings$FY16Giving = as.numeric(givings$FY16Giving)
 ```  
 
 We are also going to group majors into main categories including Sciences, SocialScience, FineArts, ForeignLanguages, Education, PhilosophyReligion, Mathematics, MultidisciplinaryStudies, English_Literature, Business_Economics, and ComputerScience_Engineering.  
@@ -78,11 +83,11 @@ givings$Grouped.Major <-fct_collapse(givings$Major, Sciences = c("Chemistry", "P
 
 Lastly, we are going to create factor variables out of donations, since we are asked to group FY2016 donations to 5 buckets, we have decided to apply that same logic to all other years. 
 ```{r}
-givings$FY12Giving.Grouped <- factor(cut(givings$FY12Giving, breaks=c(0,1,100,250,500, 200000), labels=c("[0-1)", "[1-100)", "[100-250)","[250-500)","[500-200000)"), include.lowest = TRUE))
-givings$FY13Giving.Grouped <- factor(cut(givings$FY13Giving, breaks=c(0,1,100,250,500, 200000), labels=c("[0-1)", "[1-100)", "[100-250)","[250-500)","[500-200000)"), include.lowest = TRUE))
-givings$FY14Giving.Grouped <- factor(cut(givings$FY14Giving, breaks=c(0,1,100,250,500, 200000), labels=c("[0-1)", "[1-100)", "[100-250)","[250-500)","[500-200000)"), include.lowest = TRUE))
-givings$FY15Giving.Grouped <- factor(cut(givings$FY15Giving, breaks=c(0,1,100,250,500, 200000), labels=c("[0-1)", "[1-100)", "[100-250)","[250-500)","[500-200000)"), include.lowest = TRUE))
-givings$FY16Giving.Grouped <- factor(cut(givings$FY16Giving, breaks=c(0,1,100,250,500, 200000), labels=c("[0-1)", "[1-100)", "[100-250)","[250-500)","[500-200000)"), include.lowest = TRUE))
+givings$FY12Giving.Grouped <- factor(cut(givings$FY12Giving, breaks=c(0,1,100,250,500, 200000), labels=c("[0-1)", "[1-100)", "[100-250)","[250-500)","[500-200000)"), right = FALSE))
+givings$FY13Giving.Grouped <- factor(cut(givings$FY13Giving, breaks=c(0,1,100,250,500, 200000), labels=c("[0-1)", "[1-100)", "[100-250)","[250-500)","[500-200000)"), right = FALSE))
+givings$FY14Giving.Grouped <- factor(cut(givings$FY14Giving, breaks=c(0,1,100,250,500, 200000), labels=c("[0-1)", "[1-100)", "[100-250)","[250-500)","[500-200000)"), right = FALSE))
+givings$FY15Giving.Grouped <- factor(cut(givings$FY15Giving, breaks=c(0,1,100,250,500, 200000), labels=c("[0-1)", "[1-100)", "[100-250)","[250-500)","[500-200000)"), right = FALSE))
+givings$FY16Giving.Grouped <- factor(cut(givings$FY16Giving, breaks=c(0,1,100,250,500, 200000), labels=c("[0-1)", "[1-100)", "[100-250)","[250-500)","[500-200000)"), right = FALSE))
 ```
 
 
@@ -154,35 +159,36 @@ data.frame(rbind(row,row/dim(givings)[1]), row.names = c("AttendenceEvent Count"
 
 ###2.3.8 FY12 though FY16 Giving (numerical, log transformed and Grouped)
 ```{r}
-p1 <- ggplot(givings, aes(x=FY12Giving)) +
-  stat_density(aes(y=..count..), color="black", fill="blue", alpha=0.3) +
-  labs(title = "Histogram for 2012 contrib.") +
+givings.tidy.donations <- givings[1:12] %>% gather("Giving.Year", "Donations", 8:12)
+givings.tidy.donations$Giving.Grouped <- factor(cut(givings.tidy.donations$Donations, breaks=c(0,1,100,250,500, 200000), 
+                                                    labels=c("[0-1)", "[1-100)", "[100-250)","[250-500)","[500-200000)"), right = FALSE))
+givings.tidy.donations.aggregate <- as.data.frame(xtabs(~ Giving.Grouped + Giving.Year, data = givings.tidy.donations))
+p1 <- ggplot(givings.tidy.donations, aes(x=Donations, colour=Giving.Year)) +
+  geom_density(alpha=0.3) +
+  labs(title = "Density plot for contributions") +
   theme_bw()
-p2 <- ggplot(givings, aes(x=FY12Giving)) +
-  stat_density(aes(y=..count..), color="black", fill="blue", alpha=0.3) +
+
+p2 <- ggplot(givings.tidy.donations, aes(x=Donations, colour=Giving.Year)) +
+  geom_density(alpha=0.3) +
   scale_x_continuous(breaks=c(0,1,100,250,500,200000),trans="log1p", expand=c(0,0)) +
-  labs(title = "Histogram for 2012 contributions. (log scale)") +
+  labs(title = "Log scale density plot for contributions") +
   scale_y_continuous() +
   theme_bw()
-p3 <- ggplot(givings, aes(x = FY12Giving.Grouped)) + 
-  geom_bar(aes(y = (..count..)/sum(..count..)), color="black", fill="blue", alpha=0.3) + 
+
+p3 <- ggplot(givings.tidy.donations.aggregate, aes(x = Giving.Grouped, y=Freq)) + 
+  geom_bar(aes(fill = Giving.Year ), stat = 'identity', position = 'dodge') + 
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  scale_y_continuous(labels=percent) +
-  labs(y = "% Ratios", title = "2012 contribution ratios")+
+  labs(y = "Donations", x= "Brackets", title = "Contributions over years") +
   theme_bw()
 grid.arrange(p1, p2,p3, ncol=1, nrow=3)
-
 ```
-We note that continous scale values for the contributions have a very strong skew. At log scale, we have a bi-modal distribution, with most of the values centered around 0, and other around the $100 range. What may be important, however, is to uniquely indentify and model donors who are willing to make large contributions. The third graph captures the ratio of donors in each bracket. It also reduces issues that may arise from high leverage (unique outliers than can skew the model) points. 
-
-
-# Note (Daghan): I will do some data wrangling to draw all 4 years on the same graphs
+We note that continous scale values for the contributions have a very strong skew. At log scale, we have a bi-modal distribution, with most of the values centered around 0, and other around the $100 range. What may be important, however, is to uniquely indentify and model donors who are willing to make large contributions. We observe that most years follow a similar pattern. The donor behavior seems to be consistent over multiple years. We expect (and will confirm through bivariate analysis) to find a strong correlalation between a donor's 2016 preference and his/her previous years' preferences.
 
 ##2.4 Bivariate Data Analysis
 We are going to look at the interaction between 2016 donations level and other variables. 
 
 ###2.4.1 FY16Giving.Grouped vs. Gender
-```{r}
+```{r fig.height= 3}
 mosaic(~ FY16Giving.Grouped + Gender, data = givings,
        highlighting = "Gender", highlighting_fill =c("pink", "lightblue"),
        labeling= labeling_border(rot_labels = c(0,0)))
@@ -208,16 +214,32 @@ xtabs(~ FY16Giving.Grouped + Marital.Status, data = givings)
 ```
 The data is impressively clear. Married and single people are biggest source of donations. **We expect Marital.Status to be a significant explanatory variable in our final model.**
 
-###2.4.4 FY16Giving.Grouped vs. Major and Grouped.Major
+###2.4.4 FY16Giving.Grouped vs. Major
 ```{r}
-#mosaic(~ FY16Giving.Grouped + Major, data = givings,
-#       highlighting = "Major", highlighting_fill =c("pink", "lightblue", "yellow", "orange"),
-#       labeling= labeling_border(rot_labels = c(0,0)))
-#xtabs(~ FY16Giving.Grouped + Major, data = givings)
-#mosaic(~ FY16Giving.Grouped + Grouped.Major, data = givings,
-#       highlighting = "Grouped.Major", highlighting_fill =c("pink", "lightblue", "yellow", "orange"),
-#       labeling= labeling_border(rot_labels = c(0,0)))
-#xtabs(~ FY16Giving.Grouped + Grouped.Major, data = givings)
+top.majors <- spread(data.frame(xtabs(~ Major + Giving.Year, data = subset(givings.tidy.donations, Giving.Grouped == "[500-200000)"))),Giving.Year, Freq)
+
+top.majors$Total <- rowSums(top.majors[-1])
+colS = colSums(top.majors[-1])
+top.majors1 = top.majors[top.majors$Total > 10,1:6]
+top.majors1$FY16Giving <- round(top.majors1$FY16Giving/colS[5],2)
+top.majors1$FY15Giving <- round(top.majors1$FY15Giving/colS[4],2)
+top.majors1$FY14Giving <- round(top.majors1$FY14Giving/colS[3],2)
+top.majors1$FY13Giving <- round(top.majors1$FY13Giving/colS[2],2)
+top.majors1$FY12Giving <- round(top.majors1$FY12Giving/colS[1],2)
+top.majors2 <- top.majors1[1:6] %>% gather("Giving.Year", "Donations", 2:6)
+
+ggplot(top.majors2, aes(x = Giving.Year, y=Donations)) + 
+  geom_bar(aes(fill = Major ), stat = 'identity', position = 'dodge') + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(y = "Donations", x= "Brackets", title = "Contributions over years") +
+  theme_bw()
+(results <- top.majors1[top.majors1$Major %in% c("History","Psychology","Biology", "Economics"),])
+colSums(results[-1])
+```
+For the highest donation bracket, the more than 50% of the donations are coming from 4 Majors (History, Psychology, Biology, Economics). We are going to group those 4 Majors into 1 category called "High.Donor.Major":
+
+```{r}
+givings$High.Donor.Major <- ifelse(givings$Major %in% c("History","Psychology","Biology", "Economics"),TRUE,FALSE)
 ```
 This data will change after Jill's update, skipping for now
 
