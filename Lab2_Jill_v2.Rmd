@@ -1,0 +1,433 @@
+---
+title: "Lab2_Draft"
+author: "Kiersten Henderson"
+date: "10/8/2017"
+output: pdf_document
+---
+
+```{r}
+library(vcd)
+
+```
+
+
+## Exploratory Data Analysis
+
+```{r}
+givings = read.csv("lab2data.csv")
+```
+
+
+```{r}
+library(Hmisc)
+library(ggplot2)
+
+describe(givings)
+```
+
+There are 1000 observations and twelve variables (five of them are donations in different years). There are no missing observations.
+
+
+FY2016 is the dependent variable that we'd like to predict. However, we are giveing FYGiving for years 2012 through 2016 as amount in dollars (a continuous variable).
+Gender is a binary variable.
+Marital status has four categories (D, M, S, W), which we interpret as divorced, married, single, windowed.
+Graduating class is strangely in five categories each ten years apart (1972, 1982, 1992, 2002, 2012).
+Donor's major is a categorical variable with 45 categories.
+Attendance of events is a binary category variable (0 for no, 1 for yes).
+?Next degree is a categorical variable with 47 categories.
+
+After i cleaned up the variables, i need to go back and describe each one (univariate analysis).
+
+```{r}
+str(givings)
+```
+
+
+
+```{r}
+levels(givings$Gender)  = c("Female", "Male")
+givings$AttendenceEvent = factor(givings$AttendenceEvent, levels = c(0,1), labels = c("Didn't Attend", "Attended"))
+levels(givings$Marital.Status) = c("Divorced", "Married", "Single", "Widowed")
+givings$Class.Year = factor(givings$Class.Year)
+str(givings)
+```
+
+
+
+```{r}
+library(tidyverse)
+library(forcats)
+
+givings$grouped_major <-fct_collapse(givings$Major, Sciences = c("Chemistry", "Physics", "Biology", "General Science-Chemistry", "General Science-Psycho", "General Science-Math", "Mathematics-Physics", "General Science-Biology", "Zoology", "General Science", "General Science-Physics"), SocialScience =c("Psychology", "Anthropology", "Sociology", "History", "Political Science", "Sociology-Anthropology", "Economics-Regional Stds.","Pol. Sci.-Regional Stds."), FineArts = c("Theatre", "Music", "Art", "Speech (Drama, etc.)"),ForeignLanguages = c("Spanish", "German", "French", "Russian", "Chinese"),Education = c("Physical Education", "Education", "Speech Correction"),PhilosophyReligion = c("Religious Studies", "Philosophy", "Philosophy-Religion"),Mathematics = "Mathematics", MultidisciplinaryStudies = "Independent",English_Literature = c("English", "Classics", "American Studies", "Comparative Literature", "English-Journalism"),Business_Economics =c("Economics-Business", "Economics"), ComputerScience_Engineering = c("Computer Science","Engineering"))
+```
+
+
+
+```{r}
+summary(givings$grouped_major)
+describe(givings$grouped_major)
+```
+
+There are very few computer science/engineering, education, multidisciplinary, and mathematics majors. Therefore, our ability to predcit how they donate could be poor.
+
+
+```{r}
+ggplot(givings, aes(grouped_major)) + geom_bar() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+We need a total donation normalized by number of people (average - median maybe- donation).
+But considering the above and below charts, it is obvious that business/economics is overrepresented in terms of FY15 giving (consider doing this with averaged 2012, 2014 FY giving when predicting 2015 giving).
+
+Wow! It seems that the very large donations throw everything off (like which major has higher donations every year fluctuates based on large donations that differ in major from year to year). It seems like FYGiving 2013 is very different from the others because there seems to be a very large donation of >$150,000. 
+
+**should i do Median donation by person in each major in each year? need some kind of aggregation - instead maybe do more careful analysis categorical donation variable below.
+
+
+```{r}
+ggplot(givings, aes(grouped_major,FY15Giving)) + geom_bar(stat="identity")+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
+ggplot(givings, aes(grouped_major,FY16Giving)) + geom_bar(stat="identity")+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
+ggplot(givings, aes(grouped_major,FY14Giving)) + geom_bar(stat="identity")+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
+ggplot(givings, aes(grouped_major,FY13Giving)) + geom_bar(stat="identity")+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
+ggplot(givings, aes(grouped_major,FY12Giving)) + geom_bar(stat="identity")+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+Class year affects total donations. People who graduated longer ago are probably older and they seem to donate more total money. It seems like they make more larger donations, but there are fewer people in "older" class years. See  contingency table below for grouped giving category observations.
+
+```{r}
+ggplot(givings, aes(Class.Year,FY15Giving)) + geom_bar(stat="identity")
+```
+
+There is a high correlation of the different fiscal years of giving with most other years (except fiscal year 2013). Maybe something went wrong with soliciting donations that year? NO - There was one very large donation by a former Science major that throws off correlations in 2013.
+
+This is why it is good to use the grouped donation variable we are asked to create (done below).
+
+Conclusion: Maybe should do some kind of grouping of years? But how - average continuous dollars for each year and then cut into groups? Or i guess we could just pick the most recent year (2014 for 2015 and 2015 for 2016). Below, there is a contingency table for categorical donation amount variables of 2015 and 2014 and it supports the idea of using the year before to model the current year.
+
+```{r}
+library(car)
+library(corrplot)
+M = givings[-c(1:7, 13:17)] 
+M_corr = cor(M)
+corrplot(M_corr, method="circle", type="upper")
+```
+
+```{r}
+ggplot(givings,aes(FY12Giving))+geom_histogram(bins=30)
+ggplot(givings,aes(FY13Giving))+geom_histogram(bins=30)
+ggplot(givings,aes(FY14Giving))+geom_histogram(bins=30)
+ggplot(givings,aes(FY15Giving))+geom_histogram(bins=30)
+ggplot(givings,aes(FY16Giving))+geom_histogram(bins=30)
+
+ggplot(givings,aes(log(FY12Giving+1)))+geom_histogram(bins=30)
+ggplot(givings,aes(log(FY13Giving+1)))+geom_histogram(bins=30)
+ggplot(givings,aes(log(FY14Giving+1)))+geom_histogram(bins=30)
+ggplot(givings,aes(log(FY15Giving+1)))+geom_histogram(bins=30)
+ggplot(givings,aes(log(FY16Giving+1)))+geom_histogram(bins=30)
+```
+
+
+Creating grouped (categorical) donation amount variables:
+
+```{r}
+givings$FY12Giving_Grouped <- factor(cut(givings$FY12Giving, breaks=c(0,1,100,250,500, 200000), labels=c("(0-1)", "(1-100)", "(100-250)","(250-500)","(500-200000)"), right = FALSE))
+
+givings$FY13Giving_Grouped <- factor(cut(givings$FY13Giving, breaks=c(0,1,100,250,500, 200000), labels=c("(0-1)", "(1-100)", "(100-250)","(250-500)","(500-200000)"), right = FALSE))
+
+givings$FY14Giving_Grouped <- factor(cut(givings$FY14Giving, breaks=c(0,1,100,250,500, 200000), labels=c("(0-1)", "(1-100)", "(100-250)","(250-500)","(500-200000)"), right = FALSE))
+
+givings$FY15Giving_Grouped <- factor(cut(givings$FY15Giving, breaks=c(0,1,100,250,500, 200000), labels=c("(0-1)", "(1-100)", "(100-250)","(250-500)","(500-200000)"), right = FALSE))
+
+givings$FY16Giving_Grouped <- factor(cut(givings$FY16Giving, breaks=c(0,1,100,250,500, 200000), labels=c("(0-1)", "(1-100)", "(100-250)","(250-500)","(500-200000)"), right = FALSE))
+
+```
+
+
+In general (across years) half of people donate and half do not. 
+Half of people who donate give under a hundred dollars. Around one fith of people who donate (1/10 of all people) give between 100 and 250 dollars. 
+There are usually less than 25 people every year who give 250-500 dollars or 500+ dollars. That could be problematic for accurately predicting who gives the highest donations.
+
+
+```{r}
+ggplot(givings, aes(FY12Giving_Grouped)) + geom_bar()
+ggplot(givings, aes(FY13Giving_Grouped)) + geom_bar(aes(fill=FY13Giving_Grouped))
+ggplot(givings, aes(FY14Giving_Grouped)) + geom_bar(aes(fill=FY14Giving_Grouped))
+ggplot(givings, aes(FY15Giving_Grouped)) + geom_bar(aes(fill=FY15Giving_Grouped))
+ggplot(givings, aes(FY16Giving_Grouped)) + geom_bar(aes(fill=FY16Giving_Grouped))
+
+```
+
+##DONATION LEVEL VS. CLASS YEAR
+
+!! Caveat: should make all the bar charts below percent of people in each category that give the particular donation amount - ie. percent of the class of 1972 that donate nothing, percent of the class of 1972 that donate 1-100 dollars. 
+Right now the charts are counts of the categories in the legends and the number of people in each category is different (except for in the case of men and women).
+
+More people from more recent classes do not donate. More people from recent classes donate in lower donation amounts. As graduation year is "older", there are more larger value donations (remember, chart is not normalized to # of people in each category).
+
+```{r}
+ggplot(givings, aes(FY15Giving_Grouped)) + geom_bar(aes(fill=Class.Year))
+```
+
+As seen in the contingency table below, class year does affect amount donated. The most recent graduates have the highest percent of people who do not donate. Wherease the "oldest"" graduates have the highest amount of people who donate in the higher donation bracket.
+
+The Pearson Chi Square and Likelihood Ratio Tests indicate that we should reject the null hypothesis that Class Year and Donation group are independent of each other (for FY15Giving_Grouped data).
+
+```{r}
+Class.year.table <- xtabs(~Class.Year, data = givings)
+prop.table(Class.year.table)
+
+#t7 <-xtabs(~FY16Giving_Grouped+Class.Year, data=givings)
+#round(t7/rowSums(t7),2)
+
+#t8 <-xtabs(~FY12Giving_Grouped+Class.Year, data=givings)
+#round(t8/rowSums(t8),2)
+
+#t9 <-xtabs(~FY13Giving_Grouped+Class.Year, data=givings)
+#round(t9/rowSums(t9),2)
+
+#t10 <-xtabs(~FY14Giving_Grouped+Class.Year, data=givings)
+#round(t10/rowSums(t10),2)
+
+t11 <-xtabs(~FY15Giving_Grouped+Class.Year, data=givings)
+round(t11/rowSums(t11),2)
+
+assocstats(t11)
+```
+
+
+I created new binary variable to compare number of people who donate versus do not donate for fiscal year 2015. 
+
+```{r}
+givings$donatedFY16 <-fct_collapse(givings$FY16Giving_Grouped, Donated = c("(1-100)", "(100-250)", "(250-500)", "(500-200000)"), DidnotDonate ="(0-1)")
+```
+
+I wanted to conclusively see if the number of people who do and do not donate differ between class years. They do!
+
+```{r}
+donated.classyearTable = xtabs(~donatedFY15+Class.Year, data=givings)
+donated.classyearTable
+```
+
+
+
+
+##DONATION LEVEL VS. GENDER
+
+```{r}
+ggplot(givings, aes(FY15Giving_Grouped)) + geom_bar(aes(fill=Gender), position = "dodge")
+
+```
+
+FY15 donations are independent of gender according to LR and Pearson Chi square tests. There are clear differences in donation patterns for larger donation categories, but there are few observations in these categories.
+
+```{r}
+t1 <-xtabs(~FY15Giving_Grouped+Gender, data=givings)
+round(t1/rowSums(t1),2)
+assocstats(t1)
+```
+
+##DONATION LEVEL VS. MAJOR
+
+
+```{r}
+ggplot(givings, aes(FY15Giving_Grouped)) + geom_bar(aes(fill=grouped_major))
+
+```
+
+Seems marginally significant by LR test that FY15 giving dependent on major. But not significant by Pearson Chi square test. I put it in first pass of models - not convincingly significant!
+
+```{r}
+t17 <-xtabs(~FY15Giving_Grouped+grouped_major, data=givings)
+round(t17/rowSums(t17),2)
+assocstats(t17)
+```
+
+```{r}
+#group all previous year donation to one variable
+givings$last4yearavg<- rowMeans(givings[c("FY12Giving","FY13Giving","FY14Giving","FY15Giving")])
+major_index<-data.frame(aggregate(last4yearavg~Major, data = givings,median))
+major_index$major_donation_level<-factor(cut(major_index$last4yearavg, breaks=c(0,1,50,500),  right = FALSE))
+givings$High.Donor.Major <- ifelse(givings$Major %in% c("History","Psychology","Biology", "Economics"),TRUE,FALSE)
+
+givings2<-merge(x = givings, y = major_index, by = "Major")
+
+ggplot(givings2, aes(major_donation_level)) + geom_bar(aes(fill=FY16Giving_Grouped))
+t18 <-xtabs(~major_donation_level+FY16Giving_Grouped, data=givings2)
+round(t18/rowSums(t18),2)
+```
+##DONATION LEVEL VS. MARITAL STATUS
+
+
+Marital status seems to contribute to amount donated in all fiscal years. Maried people give more than single people and larger amounts are disproportionately from married people. Divorced and widowed people tend to give less often 
+
+```{r}
+ggplot(givings) + geom_bar(mapping = aes(FY15Giving_Grouped,fill=Marital.Status), position="dodge")
+
+```
+
+The Pearson Chi Square and LR tests indicate that we should reject the null hypothesis that marital status and donations in each category are independent of each other (for FY15Giving_Grouped data).
+
+```{r}
+
+
+t6 <-xtabs(~FY15Giving_Grouped+Marital.Status, data=givings)
+
+assocstats(t6)
+```
+
+
+##DONATION LEVEL VS. ATTENDANCE EVENTS
+
+
+```{r}
+ggplot(givings) + geom_bar(mapping = aes(FY15Giving_Grouped,fill=AttendenceEvent), position="dodge")
+```
+
+
+People who attended events are more likely to give in every donation level category (FY15 dependent on attendance of events).
+
+```{r}
+
+t16 <-xtabs(~FY16Giving_Grouped+AttendenceEvent, data=givings)
+t(round(t(t16)/colSums(t16),2))
+assocstats(t16)
+ggplot(givings2, aes(AttendenceEvent)) + geom_bar(aes(fill=FY16Giving_Grouped))
+```
+
+Wanted to check in general if attending events increased chance of donating (indepent of size of donation). It does.
+
+```{r}
+donated.attendanceTable = xtabs(~donatedFY16+AttendenceEvent, data=givings)
+donated.attendanceTable
+ggplot(givings, aes(AttendenceEvent)) + geom_bar(aes(fill=donatedFY16))
+```
+
+
+##DONATION LEVEL VS. DONATION LEVEL IN PREVIOUS YEAR
+
+Fiscal year 2015 donation levels are very obviously not independent of 2014 giving levels.
+
+```{r}
+t0 <-xtabs(~FY15Giving_Grouped+FY14Giving_Grouped, data=givings)
+round(t0/rowSums(t0),2)
+assocstats(t0)
+```
+
+#Preliminary Modeling
+
+```{r}
+
+#i decided to estimate a model for FY15 categorical donations. Then we could use the model to evaluate how well we predicts FY16 donation patterns.
+
+#i haven't looked at interaction terms yet! because i havent done bivariate analysis between explanatory variables yet.
+
+#Proportional Odds Model
+##don't forget to switch the sign of the coefficients from the polr function
+#remember that if the coefficient for the overall variable is not significant, cannot use the coefficients for each category.(like in this case grouped_major)
+
+library(ordinal)
+
+model_B1a <- clm(formula= FY16Giving_Grouped ~ FY15Giving_Grouped, data = givings, link="logit")
+summary(model_B1a)
+Anova(model_B1a)
+
+model_B1b <- clm(formula= FY16Giving_Grouped ~ FY14Giving_Grouped, data = givings, link="logit")
+summary(model_B1b)
+Anova(model_B1b)
+model_B1c <- clm(formula= FY16Giving_Grouped ~ FY13Giving_Grouped, data = givings, link="logit")
+summary(model_B1c)
+Anova(model_B1c)
+model_B1d <- clm(formula= FY16Giving_Grouped ~ FY12Giving_Grouped, data = givings, link="logit")
+summary(model_B1d)
+Anova(model_B1d)
+
+model_B2 <- clm(formula= FY16Giving_Grouped ~ AdvDeg, data = givings, link="logit")
+summary(model_B2)
+Anova(model_B2)
+
+model_B3a <- clm(formula= FY16Giving_Grouped ~ major_donation_level+FY15Giving_Grouped, data = givings2, link="logit")
+summary(model_B1a)
+Anova(model_B3a)
+model_B3b <- clm(formula= FY16Giving_Grouped ~ High.Donor.Major
++FY15Giving_Grouped, data = givings2, link="logit")
+summary(model_B1b)
+Anova(model_B3b)
+
+
+anova(model_B3a,model_B3b)
+
+```
+it seems model1c,Class.Year +Marital.Status + AttendenceEvent+FY15Giving_Grouped works best for now. 
+The major variable is neither significant or contributing to the model. 
+The FY15Giving works better than putting all past years
+The FY14Giving works better than using last 4 year average
+
+```{r}
+#they kind of suggested we should compare against multinomial regression
+library(nnet)
+
+model2 <- multinom(formula = FY15Giving_Grouped ~ Class.Year + grouped_major + Marital.Status + AttendenceEvent+FY14Giving_Grouped, data = givings)
+
+Anova(model2)
+
+model2a <- multinom(formula = FY15Giving_Grouped ~ Class.Year + 
+    Marital.Status + AttendenceEvent+FY14Giving_Grouped, data = givings)
+
+Anova(model2a)
+# use all past years
+model2b <- multinom(formula = FY16Giving_Grouped ~ Class.Year +Marital.Status+AttendenceEvent+FY12Giving+FY13Giving+FY14Giving+FY15Giving, data = givings)
+summary(model2b)
+Anova(model2b)
+
+#use major values as index
+model2c <- multinom(formula = FY16Giving_Grouped ~ Class.Year +Marital.Status + AttendenceEvent+FY14Giving_Grouped+last4yearavg.y+FY13Giving_Grouped+FY12Giving_Grouped+FY15Giving_Grouped, data = givings2)
+
+Anova(model2c)
+
+#use major values as a category
+model2d <- multinom(formula = FY16Giving_Grouped ~ Class.Year +Marital.Status + AttendenceEvent+FY15Giving_Grouped+major_donation_level, data = givings2)
+
+Anova(model2d)
+
+#only use 2015
+model2e <- multinom(formula = FY16Giving_Grouped ~ Class.Year +Marital.Status + AttendenceEvent+FY15Giving_Grouped, data = givings2)
+
+Anova(model2e)
+#Use last 4 year avg(no major variable)
+model2f <- multinom(formula = FY16Giving_Grouped ~ Class.Year +Marital.Status + AttendenceEvent+last4yearavg.x, data = givings2)
+
+Anova(model2f)
+# comparison between different models
+anova(model2e,model2b)
+anova(model2e,model2c)
+anova(model2e,model2d)
+anova(model2e,model2f)
+
+```
+it seems model2e,Class.Year +Marital.Status + AttendenceEvent+FY15Giving_Grouped works best for now. 
+The major variable is neither significant or contributing to the model. 
+The FY15Giving works better than putting all past years
+The FY14Giving works better than using last 4 year average
+
+
+We might want to switch base level of Class.Year to 2012 instead of 1972.
+As EDA suggests, Major doens't seem significant in either model.
+
+
+```{r}
+#here we predict estimated probability of being in a certain amount donated category based on values of explanatory variables we choose - can we feed in the FY15 dataframe to get out predictions for 2016?. Or should we just give specific combinations of variables that we think are the most intersting/enlightening?
+
+#We probably compare and contrast predictions for multinomial regression vs ordinal regression like he did in the LiveSession04_v3_JY document.
+```
+
+
+Predictive problems: 
+
+-very few of some of majors, not good ability to predict how much people with those majors are likely to donate - this may not matter depending on whether major is significant in our final model.
+
+Also, there very few large donations every year -usually less than 25 people who give 250-500 dollars and less than 25 people who give 500+ dollars. It may be hard to predict who are the highest donors. For instance, it seems like men may make large donations more frequently than women, but the difference is not significantly different. Maybe if we had higher numbers, we would see a trend exists there?
+
+
+I will create a "next degree"" grouping (i didn't explore this variable yet): thinking of doing "bachelors", "graduate level degree", "none". 
+Or should i make it more granular ie. split into MBA, MD, JD, etc ? Or try to guess which degrees are "professional degrees" - like MBA, MD, JD vs masters and PhD?
+
