@@ -29,19 +29,6 @@ library(forcats)
 library(scales)
 library(gridExtra)
 
-if (dir.exists("XXXX")) {
-  ## For Kiersten
-  setwd("XXXX")
-} else if (dir.exists("YYY")) {
-  ## For Jill
-  setwd("YYY")
-} else if (dir.exists("ZZZ")) {
-  ## For Hoang
-  setwd("ZZZ")
-} else if (dir.exists("/Users/daghan/Hacking/Berkeley/W271/Labs/w271_lab2/")){
-  ## For Daghan home computer
-  setwd("/Users/daghan/Hacking/Berkeley/W271/Labs/w271_lab2/")
-}
 
 givings = read.csv("./lab2data.csv")
 describe(givings)
@@ -266,9 +253,10 @@ M_corr = cor(M)
 corrplot(M_corr, method="circle", type="upper")
 ```
 ```{r}
-mosaic(~ FY16Giving.Grouped + FY15Giving.Grouped, data = givings,
-       highlighting = "FY15Giving.Grouped", highlighting_fill =c("pink", "lightblue", "yellow", "orange","red"),
-       labeling= labeling_border(rot_labels = c(0,0)))
+
+xtabs(~ FY16Giving.Grouped + FY12Giving.Grouped, data = givings)
+xtabs(~ FY16Giving.Grouped + FY13Giving.Grouped, data = givings)
+xtabs(~ FY16Giving.Grouped + FY14Giving.Grouped, data = givings)
 xtabs(~ FY16Giving.Grouped + FY15Giving.Grouped, data = givings)
 ```
 We notice that for any given donation bracket, most likely donation level for 2016 is the same level in 2015 (Ex: 40 out of 48 top donors in 2016 were also top donors in 2015). **So the prior year donation levels are a strong indicator for this year's donation levels.**
