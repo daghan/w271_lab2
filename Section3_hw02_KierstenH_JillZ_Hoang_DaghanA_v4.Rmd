@@ -22,7 +22,13 @@ library(gridExtra)
 ```
 
 #1 Introduction  
-An introduction to the project, which should include a concise summary of the key results as well as techniques you used in your final model.
+
+Our team of data scientists is working with a University foundation to identify alumni who are likely to donate in the future. We were able to model not just whether alumni with particular characteristics would donate, but rather what level of contribution particular alumni were most likely to make.
+
+In order to evaluate what variables to include when we estimated our proportional odds model, we considered fundraising domain knowledge and the results of our explanatory data analysis (EDA). Fundraising professionals typically consider an individual's wealth (ability to give) and enthusiasm for giving when they consider who might be the most likely, loyal, and generous donors to a particular cause. For this reason and due to our EDA, we included Class.Year in the model we estimated because it is a proxy for wealth (in our dataset, the alumni who have graduated the longest ago likely have the highest earning potential). Similarly, we included Next.Degree as another potential indicator of wealth (those individuals with graduate degrees frequently have higher incomes). Enthusiasm for and support of the university is evident if an alumnus has attended a university event, and also if they have previously donated to their alma matter. For these reasons and due to our EDA, we included Event.Attendence and all previous years donations to the university in our model (FY12Giving-FY16Giving). In addition, we found in our EDA that Gender played a role in the philanthropic behavior towards the University and we thus included Gender when we estimated our model.
+
+**describe key results of model**
+
 
 #2 Exploratory Data Analysis
 
