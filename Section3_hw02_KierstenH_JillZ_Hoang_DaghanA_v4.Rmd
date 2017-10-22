@@ -1,0 +1,497 @@
+---
+title: "W271 Section 3 Lab 2"
+author: "Kiersten Henderson, Jill Zhang, Hoang Phan, Daghan Altas"
+date: "10/8/2017"
+output: pdf_document
+---
+
+```{r setup, warning=FALSE, message=FALSE, size="tiny"}
+library(knitr)
+library(vcd)
+opts_chunk$set(tidy.opts=list(width.cutoff=75),tidy=TRUE)
+library(Hmisc)
+library(ggplot2)
+library(dplyr)
+library(GGally)
+library(data.table)
+library(stargazer)
+library(tidyverse)
+library(forcats)
+library(scales)
+library(gridExtra)
+```
+
+#1 Introduction  
+An introduction to the project, which should include a concise summary of the key results as well as techniques you used in your final model.
+
+#2 Exploratory Data Analysis
+
+```{r}
+givings = read.csv("./lab2data.csv")
+str(givings)
+sum(is.na(givings))
+```
+##2.1 Observations  
+
+* There are no missing variables, which simplifies the data clean-up task.
+* There are 1000 observations and twelve variables (five of them are donations in different years). 
+* FY2016 is the dependent variable that we'd like to predict. However, we are given FYGiving for years 2012 through 2016 as amount in dollars (a c4ontinuous variable).
+* Maximum donation is \$161500 (in 2013)
+* Gender is a binary variable.
+* Marital status has four categories (D, M, S, W), which we interpret as divorced, married, single, windowed.
+* Graduating class is strangely in five categories each ten years apart (1972, 1982, 1992, 2002, 2012).
+* Donor's major is a categorical variable with 45 categories.
+* Attendance of events is a binary category variable (0 for no, 1 for yes).
+* Next degree is a categorical variable with 47 categories.
+
+After i cleaned up the variables, i need to go back and describe each one (univariate analysis).
+
+##2.2 Data clean-up
+
+First, we are going to clean-up the factor variables by providing explicit values for each level.  
+```{r}
+levels(givings$Gender)  = c("Female", "Male")
+givings$AttendenceEvent = factor(givings$AttendenceEvent, levels = c(0,1), 
+                                 labels = c("Didn't Attend", "Attended"))
+levels(givings$Marital.Status) = c("Divorced", "Married", "Single", "Widowed")
+givings$Class.Year = factor(givings$Class.Year)
+givings$FY12Giving = as.numeric(givings$FY12Giving)
+givings$FY13Giving = as.numeric(givings$FY13Giving)
+givings$FY14Giving = as.numeric(givings$FY14Giving)
+givings$FY15Giving = as.numeric(givings$FY15Giving)
+givings$FY16Giving = as.numeric(givings$FY16Giving)
+```  
+
+We are going to create factor variables out of donations, since we are asked to group FY2016 donations to 5 buckets, we have decided to apply that same logic to all other years. 
+```{r size = 'tiny'}
+givings$FY12Giving.Grouped <- factor(cut(givings$FY12Giving, breaks=c(0,1,100,250,500, 200000), labels=c("[0-1)", "[1-100)", "[100-250)","[250-500)","[500-200000)"), right = FALSE))
+givings$FY13Giving.Grouped <- factor(cut(givings$FY13Giving, breaks=c(0,1,100,250,500, 200000), labels=c("[0-1)", "[1-100)", "[100-250)","[250-500)","[500-200000)"), right = FALSE))
+givings$FY14Giving.Grouped <- factor(cut(givings$FY14Giving, breaks=c(0,1,100,250,500, 200000), labels=c("[0-1)", "[1-100)", "[100-250)","[250-500)","[500-200000)"), right = FALSE))
+givings$FY15Giving.Grouped <- factor(cut(givings$FY15Giving, breaks=c(0,1,100,250,500, 200000), labels=c("[0-1)", "[1-100)", "[100-250)","[250-500)","[500-200000)"), right = FALSE))
+givings$FY16Giving.Grouped <- factor(cut(givings$FY16Giving, breaks=c(0,1,100,250,500, 200000), labels=c("[0-1)", "[1-100)", "[100-250)","[250-500)","[500-200000)"), right = FALSE))
+```
+
+
+##2.3 Univariate Data Analysis
+We are going to conduct univariate data analysis for the following variables:  
+
+* Gender
+* Class.Year
+* Marital.Status
+* Major
+* Next.Degree
+* AttendenceEvent
+* FY12 though FY16 Giving (numerical, log transformed and Grouped)
+
+###2.3.1 Gender
+
+```{r}
+row <- xtabs( ~ Gender, data = givings)
+data.frame(rbind(row,row/dim(givings)[1]), row.names = c("Donor Count", "Ratio"))
+```
+The dataset contains nearly identical amount of female vs. male donors. This result is mildly surprising but possible. According to the National Center for Education Statistics, the national average is 56% for female and 44% for male enrollment in college education (https://nces.ed.gov/programs/coe/indicator_cha.asp) in 2015. The data for graduation rates is similary skewed towards women. However, the rates are more likely to be skewed toward men in earlier years. Also, there is a chance that this specific university bucks the national trends for a variety of reasons. 
+
+###2.3.2 Class.Year
+
+```{r}
+row <- xtabs( ~ Class.Year, data = givings)
+data.frame(rbind(row,row/dim(givings)[1]), row.names = c("Class.Year Count", "Ratio"))
+```
+This table is surprising. There are only 5 graduation years. The data is not a random subsample from the entire population but rather a subsample of 10-years (each data is 10 years apart). **It will be very difficult to argue that the results we infer from our model is applicable to all graduates of the university.**
+
+###2.3.4 Marital.Status
+```{r}
+row <- xtabs( ~ Marital.Status, data = givings)
+data.frame(rbind(row,row/dim(givings)[1]), row.names = c("Marital.Status Count", "Ratio"))
+```
+Divorce to Marriage ratio is very low. According to Wikipedia (https://en.wikipedia.org/wiki/Divorce_demography), the expected ratio is around 44%. That said, the measurement methodology is slightly different and we expect rates to change with graduation years (divorce rates are more likely to increase with age). So we are going to assume that Marital.Status data is valid sample for the population.
+
+###2.3.5 Major
+```{r fig.height=1.5, warning = FALSE}
+ggplot(givings, aes(x = Major)) + geom_histogram(stat ="count") + labs(title = "Count for each Major", x = "Various Majors") +
+  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank())
+head(sort(xtabs( ~ Major, data = givings)),3)
+```
+Many of these factors have very little representation (ex: Chinese, English-Journalism) so we don't expect a significant contribution to our model. That said, we are going to investigate grouping strategies to improve our model.
+
+###2.3.6 Next.Degree
+```{r fig.height= 1.5, warning=FALSE, size="tiny"}
+ggplot(givings, aes(x = Next.Degree)) + geom_histogram(stat ="count") + labs(title = "Count for each Next.Degree", x = "Various Degrees") +
+  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+givings$Adv.Deg <-fct_collapse(givings$Next.Degree,
+                               bachelor_equivalent = c("AA","BA","BAE","BD","BFA","BN","BS","BSN","LLB","LLD","NDA","UBDS","UDDS","UMD","UMDS","UNKD","TC"), 
+                               above_bachelor= c("DC","DDS","DMD","DO","DO2","DP","JD","PHD","MA","MA2","MAE","MALS","MAT","MBA","MCP","MD","MD2","ME", "MFA","MHA","ML","MLS","MM","MPA","MPH","MS","MSM","MSW","STM"))
+```
+The Next.Degree as a factor variable is too scathered. Many levels only have a single count (ex: MA2, MALS, MSM, BD, etc). We will group donor into 3 catories;  those without a next degree (None), those with a bachelor equivalent and those with a degree higher than bachelor.  
+
+###2.3.7 AttendenceEvent
+```{r}
+row <- xtabs( ~ AttendenceEvent, data = givings)
+data.frame(rbind(row,row/dim(givings)[1]), row.names = c("AttendenceEvent Count", "Ratio"))
+```
+40% of graduates have attended at least one Alumni event organized between 2012 and 2015. This is a very high ratio. Intuitively, we expect a high correlation between this variable and donatios so we'll include this variable in our analysis. 
+
+###2.3.8 FY12 though FY16 Giving (numerical, log transformed and Grouped)
+```{r}
+givings.tidy.donations <- givings[1:12] %>% gather("Giving.Year", "Donations", 8:12)
+givings.tidy.donations$Giving.Grouped <- factor(cut(givings.tidy.donations$Donations, breaks=c(0,1,100,250,500, 200000), 
+                                                    labels=c("[0-1)", "[1-100)", "[100-250)","[250-500)","[500-200000)"), right = FALSE))
+givings.tidy.donations.aggregate <- as.data.frame(xtabs(~ Giving.Grouped + Giving.Year, data = givings.tidy.donations))
+p1 <- ggplot(givings.tidy.donations, aes(x=Donations, colour=Giving.Year)) +
+  geom_density(alpha=0.3) +
+  labs(title = "Density plot for contributions") +
+  theme_bw()
+
+p2 <- ggplot(givings.tidy.donations, aes(x=Donations, colour=Giving.Year)) +
+  geom_density(alpha=0.3) +
+  scale_x_continuous(breaks=c(0,1,100,250,500,200000),trans="log1p", expand=c(0,0)) +
+  labs(title = "Log scale density plot for contributions") +
+  scale_y_continuous() +
+  theme_bw()
+
+p3 <- ggplot(givings.tidy.donations.aggregate, aes(x = Giving.Grouped, y=Freq)) + 
+  geom_bar(aes(fill = Giving.Year ), stat = 'identity', position = 'dodge') + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(y = "Donations", x= "Brackets", title = "Contributions over years") +
+  theme_bw()
+grid.arrange(p1, p2,p3, ncol=1, nrow=3)
+```
+We note that continous scale values for the contributions have a very strong skew. At log scale, we have a bi-modal distribution, with most of the values centered around 0, and other around the $100 range. What may be important, however, is to uniquely indentify and model donors who are willing to make large contributions. We observe that most years follow a similar pattern. The donor behavior seems to be consistent over multiple years. We expect (and will confirm through bivariate analysis) to find a strong correlalation between a donor's 2016 preference and his/her previous years' preferences.
+
+##2.4 Bivariate Data Analysis
+We are going to look at the relationship between these following variables:
+
+* FY16Giving.Grouped vs. (Gender, Class.Year, Marital.Status, Major, Next.Degree, AttendenceEvent)
+* FY16Giving.Grouped vs. (FY15Giving.Grouped, ...., FY12Giving.Grouped)
+* Gender vs. (Class.Year, Marital.Status, Major)
+* Major vs. Next.Degree
+* Class.Year vs. AttendenceEvent
+
+###2.4.1 FY16Giving.Grouped vs. Gender
+```{r fig.height= 3}
+t1 <- xtabs(~ Gender + FY16Giving.Grouped , data = givings)
+t1.1 <-round(t1/rowSums(t1),2)
+#kable(list(t1, t1.1), caption = "Frequency vs. Ratio for FY16Giving.Grouped vs. Gender")
+t1
+t1.1
+```
+In table 1, we note two interesting observations. There are more donations in the [\$500-\$200K) bracket than the [\$250-\$500) bracket. Also at $100 or above, men consistently donate more than women. 
+
+###2.4.2 FY16Giving.Grouped vs. Class.Year
+```{r}
+t2 <- xtabs(~ Class.Year + FY16Giving.Grouped , data = givings)
+t2.1 <- round(t2/rowSums(t2),2)
+#kable(list(t2,t2.1), caption = "Frequency and Ratio for FY16Giving.Grouped vs. Class.Year")
+t2
+t2.1
+```
+There are 3 key insights from this table:
+
+1. Older alumni make disportionately bigger donations (15% of the Class of 72 made $500 + donations).
+2. A higher percentage of the older alumni make donations ($0 donations is only 48% for the class of 72, vs 66% for the class of 2012).
+3- But there are more recent graduates (not sure why!). So even as their ratio is lower, most of the \$1-\$100 donations come from the class for 2012. 
+
+###2.4.3 FY16Giving.Grouped vs. Marital.Status  
+```{r}
+t3 <- xtabs(~ Marital.Status + FY16Giving.Grouped, data = givings)
+t3.1 <- round(t3/rowSums(t3),2)
+#kable(list(t3,t3.1), caption = "Frequency and Ratio for FY16Giving.Grouped vs. Marital.Status")
+t3
+t3.1
+```
+The data "appears" impressively clear. Married and single people are biggest source of donations. We expect Marital.Status to be a significant explanatory variable in our final model. That said, when we do the bi-variate analysis, we'll show that most of the data comes from from maried or single people, so the big skew in the ratio mostly attributable to the low number of divorced, widowed alumni in the data.
+
+###2.4.4 Donation level vs. Major
+There are 45 majors in the dataset. Some majors only has one record. It is inappropriate to dump all majors as binary values into the model because: 
+
+1. It will cause curse of dimensionality and reduce prediction power. 
+2. These binary variables will holds most of records as zero and we barely have any infromation about them. 
+
+Therefore we need to group these majors. The method we used is to group major by the median donations in the last 4 years(2012-2015). First we calculate the last 4 year average donation for each person, then we check the median amount of last 4 year average for each major. Based on this value, we can label this major as somethings like "No","Low","Medium","High" donation major and put it into the model.
+
+To find the right grouping way, we first start with a granular way to cut the median donation with 5 dollars increase. Please note that becuase it is a median value, it is much less extreme than the original donation amount(please check the histogram). The 50% of major median donation is less than 13.75 and only 25% of majors are larger than 33.75, so the original cut-offs [0, 1), [1, 100), [100, 250), [250, 500), [500, 200000) just won't work with because most of the values will be skewed in the [1:100). The granular way of cutting off increased the grouping by 5,like 0 0,1-6,6-11. We can observed the following patterns to get our final groupings:
+
+1. There is an extreme  value at 400 in the histogram. It came from the English Journalism. The English Jouralism only has one alumni in the sample and this person donate 1500 in 2015 and has donations every year from 2012 to 2015. This may indicates some problems in our sample because one person in a major can not represent the whole major. For now, **we  may still label English Jouralism as a major with high donation level but will definitely need more data to justify this point if possible.**
+2. The percentage of 2016 donation in [0,1) decreases as the it goes as major median donation goes higher. The percentage in higher buckets like [250-500) increases as the it goes as major median donation goes higher.
+3. [0,1) is a natural cut-off point which means no one in this major donates
+4. Majors with median donations in [1,10) are showing a similar behavior in 2016 donations (70% if alumni in these majors didn't donate in 2016). [10-35) are showing a similar behavior in 2016 donations, with 50-60% alumni no donations, 20% donating 1-100 and about 10% donating 100-250 and 5% in following two categories . Less than 25% of the major median are larger than 35, we can group them together.
+5. We finally decide to go with the cut-off [0,1),[1,10),[10,35) and 35+ to group the group median donation values and give them No, low, medium and high labels. It is expected that the higher the major donation level is, the more donation the alumni makes in 2016. This is consistent with our third contingency table in this section. As the major donation_level increase from No to High, the percentage of 2016 donation in [0,1) decreases while the percentage in higher buckets like [250-500),[500-200000) increase.
+
+```{r fig.height=2.5}
+givings$Last.4Year.Avg<- rowMeans(givings[c("FY12Giving","FY13Giving","FY14Giving","FY15Giving")])
+Major.Index<-data.frame(aggregate(Last.4Year.Avg ~ Major, data = givings,median))
+ggplot(Major.Index, aes(Last.4Year.Avg))+geom_histogram(bins=30)
+
+givings<-merge(x = givings, y = Major.Index, by = "Major")
+
+givings$Major.Donation.Level<-factor(cut(givings$Last.4Year.Avg.y,
+                                         labels = c("NO","Low","Medium","High"),breaks=c(0,1,10,30,200000),  right = FALSE))
+t18 <-xtabs(~Major.Donation.Level+FY16Giving.Grouped, data=givings)
+round(t18/rowSums(t18),2)
+
+givings$High.Donor.Major <- ifelse(givings$Major %in% c("History","Psychology","Biology", "Economics"),TRUE,FALSE)
+```
+We observe that Majors who (on median) made higher donations in previous years are more likely to make higher donations for FY2016.
+
+###2.4.5 FY16Giving.Grouped vs. Next.Degree
+```{r}
+t12<-xtabs(~Adv.Deg+FY16Giving.Grouped, data= givings)
+round(t12/rowSums(t12),2)
+```
+A higher proportion of people with above_bachelor degree make top donations ($500 or more), compared to other groups.
+
+###2.4.6 FY16Giving.Grouped vs. AttendenceEvent
+```{r}
+(t4 <- xtabs(~ AttendenceEvent + FY16Giving.Grouped , data = givings))
+```
+The data is inline with our expectations. Among the people who donate, there is a strong correlation between attendence and donations. In fact, most of the top donors (52 out of 59, 85%) have attended an Alumni event.
+
+###2.4.7 FY16Giving.Grouped vs. previous years' Donation levels
+
+```{r fig.height= 3}
+library(car)
+library(corrplot)
+M = givings[c(8:12)] 
+M_corr = cor(M)
+corrplot(M_corr, method="circle", type="upper")
+```
+
+```{r}
+xtabs(~ FY16Giving.Grouped + FY12Giving.Grouped, data = givings)
+xtabs(~ FY16Giving.Grouped + FY13Giving.Grouped, data = givings)
+xtabs(~ FY16Giving.Grouped + FY14Giving.Grouped, data = givings)
+xtabs(~ FY16Giving.Grouped + FY15Giving.Grouped, data = givings)
+```
+We notice that for any given donation bracket, most likely donation level for 2016 is the same level in 2015 (Ex: 40 out of 48 top donors in 2016 were also top donors in 2015). **The prior year donation levels are a strong indicator for this year's donation levels.** But, since the donation brackets are highly correletated, we expect FY15 to be strong indicator for FY16 and we also expect prior years' unique contributions to our model to be less impactful (due to the high colinearity).
+
+###2.4.8 Gender vs. Class.Year
+```{r}
+t6 <- xtabs(~ Class.Year + Gender, data = givings)
+t(t6)
+t(round(t6/rowSums(t6),2))
+```
+As expected, over the years, the gender ratio converges towards a gender neutral 50%, but in the earlier years males make a higher percentage of the sample. It is also worth noting that there is an unexpected change in the ratio for the class of 2002. We will explore the Gender:Class.Year interaction
+
+###2.4.9 Gender vs. Marital.Status
+```{r}
+t7 <- xtabs(~ Marital.Status + Gender, data = givings)
+t(t7)
+t(round(t7/rowSums(t7),2))
+```
+We knew that Married and Single people are more likely to donate. But now we understand that it is probably because vast majority of the data is made out of Married and Single people. We anticipate that this will weaking the predictive power of the Marital.Status variable. We also not that strong skew in widow ratio can be explained by the life expectency differences between men and women. 
+
+###2.4.10 Gender vs. Major
+We've already argued that, without a thoughtful grouping strategy, simply looking at each each Major is not insightful. We are going to explore the relationship between high/medium/low donation major groups and gender  
+```{r}
+t8 <- xtabs(~  Major.Donation.Level + Gender, data = givings)
+t(t8)
+t(round(t8/rowSums(t8),2))
+```
+We had already established that among the high level donors, men had a higher ratio than women. We now conclude that this is also refected for Majors. Majors, that on average had lower previous year donations had a higher percentage of males vs females. And majors that have the highest donation levels have on more males than females. 
+
+###2.4.11 Major vs. Next.Degree
+skipping for now
+
+###2.4.12 Major vs. AttendenceEvent
+```{r}
+t9 <- xtabs(~ Major.Donation.Level + AttendenceEvent, data = givings)
+t(t9)
+t(round(t9/rowSums(t9),2))
+```
+Attendence level did have a positive impact on the donations. People from medium and high donations majors were more likely to have attended at least on event. 
+
+
+###2.4.13 Class.Year vs. AttendenceEvent
+```{r}
+t10 <- xtabs(~ Class.Year + AttendenceEvent, data = givings)
+t(t10)
+t(round(t10/rowSums(t10),2))
+```
+It is remarkable that graduates from 1972 have the same (~60%) attendence rate (assuming the AttendenceEvent variable is for events since 2012 and not since they graduated) as the class of 2012. Class of 2002 has anusual spike, which is not explained by the available data. 
+
+
+##2.5 Interactions
+
+### 2.5.1 Gender, Class.Year, 2016 Donations
+```{r}
+t11 <- xtabs(~ Class.Year + FY16Giving.Grouped + Gender, data = givings)
+t11
+```
+The difference in top donations (above $500) can be explained by male / female ratio. For example, 6 women made $500+ donations from the class of 72, vs. 10 man. However, their ratio (6/10) is not too far from the female/male ratio (0.56) for the class of FY72. We are not anticipating a strong interaction between Gender, Class.Year, and 2016 Donation levels.  
+
+### 2.5.2 Gender, Major, 2016 donations
+```{r}
+t11 <- xtabs(~ Major.Donation.Level + FY16Giving.Grouped + Gender, data = givings)
+t11
+```
+Looking at the top donors from Majors that have usually high donation levels, we see that they are more likely to be male. We know that top donor Majors (Major.Donation.Level == High) have a 3-to-1 Male/Female ratio. But we observe a 7-to-0 ration for Male/Female distribution for donors who have donated above $500 and are from top donor majors. **So we we believe there may be an interaction between Gender, Major, 2016 donations**
+
+
+
+
+
+
+
+
+#Talk to Kiesten about this stuff
+There is a high correlation of the different fiscal years of giving with most other years (except fiscal year 2013). Maybe something went wrong with soliciting donations that year? NO - There was one very large donation by a former Science major that throws off correlations in 2013.
+
+This is why it is good to use the grouped donation variable we are asked to create (done below).
+
+Conclusion: Maybe should do some kind of grouping of years? But how - average continuous dollars for each year and then cut into groups? Or i guess we could just pick the most recent year (2014 for 2015 and 2015 for 2016). Below, there is a contingency table for categorical donation amount variables of 2015 and 2014 and it supports the idea of using the year before to model the current year.
+
+
+## There are usually less than 25 people every year who give 250-500 dollars or 500+ dollars. That could be problematic for accurately predicting who gives the highest donations.
+
+#3 Comparison between ordinal and nominal
+```{r}
+c1 <- xtabs(~Gender+FY16Giving.Grouped, data=givings)
+c2 <- xtabs(~Marital.Status+FY16Giving.Grouped, data=givings)
+c3 <- xtabs(~Class.Year+FY16Giving.Grouped, data=givings)
+c4 <- xtabs(~Major.Donation.Level+FY16Giving.Grouped, data=givings)
+c5 <- xtabs(~AttendenceEvent+FY16Giving.Grouped, data=givings)
+
+odds_ratio <- function(r1){
+  df1 <- as.data.frame.matrix(r1)
+  n <- dim(df1)[1]
+  len <- dim(df1)[2]
+  odds = data.frame(matrix(0, n, len-1))
+  colnames(odds) <- colnames(df1)[1:len-1]
+
+  for( i in seq(1,len-1)){
+    if(i==1) {
+      lowerp <- df1[,1]
+    }else {
+      lowerp <- rowSums(df1[,1:i])
+    }
+    if(i==len-1) {
+      upperp <- df1[,len]
+    } else {
+      upperp<-rowSums(df1[,(i+1):len])
+    }
+    odds[,i] <- lowerp/upperp
+  }
+  round(odds,2)
+
+  oratio <- data.frame(matrix(0, n-1, len-1),row.names = rownames(df1)[2:n])
+  colnames(oratio)<- colnames(odds)
+  for(j in seq(1,n-1)) oratio[j,] <- odds[j+1,]/odds[j,]
+  return(round(oratio,2))
+}
+#Gender
+odds_ratio(c1)
+#Marital Status
+odds_ratio(c2)
+#Graduating class
+odds_ratio(c3)
+#Major
+odds_ratio(c4)
+#Addent Event
+odds_ratio(c5)
+```
+
+#4 Modeling
+
+```{r}
+
+#i decided to estimate a model for FY15 categorical donations. Then we could use the model to evaluate how well we predicts FY16 donation patterns.
+
+#i haven't looked at interaction terms yet! because i havent done bivariate analysis between explanatory variables yet.
+
+#Proportional Odds Model
+##don't forget to switch the sign of the coefficients from the polr function
+#remember that if the coefficient for the overall variable is not significant, cannot use the coefficients for each category.(like in this case grouped_major)
+
+library(ordinal)
+model_B1a <- clm(formula= FY16Giving.Grouped ~ FY15Giving.Grouped, data = givings, link="logit")
+summary(model_B1a)
+Anova(model_B1a)
+
+model_B1b <- clm(formula= FY16Giving.Grouped ~ FY14Giving.Grouped, data = givings, link="logit")
+summary(model_B1b)
+Anova(model_B1b)
+model_B1c <- clm(formula= FY16Giving.Grouped ~ FY13Giving.Grouped, data = givings, link="logit")
+summary(model_B1c)
+Anova(model_B1c)
+model_B1d <- clm(formula= FY16Giving.Grouped ~ FY12Giving.Grouped, data = givings, link="logit")
+summary(model_B1d)
+Anova(model_B1d)
+
+model_B2 <- clm(formula= FY16Giving.Grouped ~ Adv.Deg, data = givings, link="logit")
+summary(model_B2)
+Anova(model_B2)
+
+model_B3a <- clm(formula= FY16Giving.Grouped ~ Major.Donation.Level+FY15Giving.Grouped, data = givings, link="logit")
+summary(model_B3a)
+Anova(model_B3a)
+model_B3b <- clm(formula= FY16Giving.Grouped ~ High.Donor.Major + FY15Giving.Grouped, data = givings, link="logit")
+summary(model_B1b)
+Anova(model_B3b)
+anova(model_B3a,model_B3b)
+
+```
+it seems model1c,Class.Year +Marital.Status + AttendenceEvent+FY15Giving.Grouped works best for now. 
+The major variable is neither significant or contributing to the model. 
+The FY15Giving works better than putting all past years
+The FY14Giving works better than using last 4 year average
+
+```{r}
+#they kind of suggested we should compare against multinomial regression
+library(nnet)
+
+model2 <- multinom(formula = FY15Giving.Grouped ~ Class.Year + Major.Donation.Level + Marital.Status + AttendenceEvent + FY14Giving.Grouped, data = givings)
+Anova(model2)
+
+model2a <- multinom(formula = FY15Giving.Grouped ~ Class.Year + 
+    Marital.Status + AttendenceEvent+FY14Giving.Grouped, data = givings)
+Anova(model2a)
+
+# use all past years
+model2b <- multinom(formula = FY16Giving.Grouped ~ Class.Year + Marital.Status + AttendenceEvent+FY12Giving+FY13Giving+FY14Giving+FY15Giving, data = givings)
+summary(model2b)
+Anova(model2b)
+
+#use major values as index
+model2c <- multinom(formula = FY16Giving.Grouped ~ Class.Year + Marital.Status + 
+                    AttendenceEvent+ FY14Giving.Grouped+ Last.4Year.Avg.y + FY13Giving.Grouped+FY12Giving.Grouped+FY15Giving.Grouped, data = givings)
+Anova(model2c)
+
+#use major values as a category
+model2d <- multinom(formula = FY16Giving.Grouped ~ Class.Year +Marital.Status + AttendenceEvent+FY15Giving.Grouped+Major.Donation.Level, data = givings)
+Anova(model2d)
+
+#only use 2015
+model2e <- multinom(formula = FY16Giving.Grouped ~ Class.Year +Marital.Status + AttendenceEvent + FY15Giving.Grouped, data = givings)
+
+Anova(model2e)
+#Use last 4 year avg(no major variable)
+model2f <- multinom(formula = FY16Giving.Grouped ~ Class.Year +Marital.Status + AttendenceEvent + Last.4Year.Avg.x, data = givings)
+Anova(model2f)
+
+# comparison between different models
+anova(model2e,model2b)
+anova(model2e,model2c)
+anova(model2e,model2d)
+anova(model2e,model2f)
+
+```
+it seems model2e,Class.Year +Marital.Status + AttendenceEvent+FY15Giving.Grouped works best for now. 
+The major variable is neither significant or contributing to the model. 
+The FY15Giving works better than putting all past years
+The FY14Giving works better than using last 4 year average
+
+
+We might want to switch base level of Class.Year to 2012 instead of 1972.
+As EDA suggests, Major doens't seem significant in either model.
+
+
+# Predictive problems: 
+
+-very few of some of majors, not good ability to predict how much people with those majors are likely to donate - this may not matter depending on whether major is significant in our final model.
+
+Also, there very few large donations every year -usually less than 25 people who give 250-500 dollars and less than 25 people who give 500+ dollars. It may be hard to predict who are the highest donors. For instance, it seems like men may make large donations more frequently than women, but the difference is not significantly different. Maybe if we had higher numbers, we would see a trend exists there?
+
+
+I will create a "next degree"" grouping (i didn't explore this variable yet): thinking of doing "bachelors", "graduate level degree", "none". 
+Or should i make it more granular ie. split into MBA, MD, JD, etc ? Or try to guess which degrees are "professional degrees" - like MBA, MD, JD vs masters and PhD?
