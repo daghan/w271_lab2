@@ -456,8 +456,9 @@ We test for independence among the variables using the Anova function, with:
 $$H_0 : \beta_2 = \beta_3 = ... \beta_p = 0$$
 $$H_a : any \ \beta_i \neq 0$$
 From the likelihood ratio test, we find that there is strong evidence that association exists for all variables except for AttendenceEvent and Major.Donor.Level.
-```{r}
+```{r, results='asis'}
 Anova(model2_Ha)
+stargazer(model_Ho,model1_Ha,model2_Ha,star.cutoffs = c(0.05, 0.01, 0.001))
 ```
 
 ##3.5 Odds Ratios amd their Confidence Intervals
@@ -487,8 +488,8 @@ We notice that many of the variables include 1 within the 95% confidence interva
 ##3.7 Model Evaluation
 We are going to use a special library to get the residuals (since clm() is not a glm model).
 ```{r fig.height= 3.5}
-p1 <-  autoplot(model_B1j)
-p2 <-  autoplot(model_B1j, what='fitted')
+p1 <-  autoplot(model2_Ha)
+p2 <-  autoplot(model2_Ha, what='fitted')
 grid.arrange(p1,p2, ncol = 2)
 ```
 We note that the residuals deviate from the Normal at the extremities but remain Normal at the center. While the variance is not fully constant, the shape and spline of the residuals vs. fitted values appear acceptable for our model.
@@ -502,12 +503,9 @@ We correctly predict 731 out of 1000 samples, so our model is 73% accurate. We a
 var.list <- c("Married","AttendenceEvent","FY15Giving.Grouped","Major.Donation.Level","Adv.Deg","Gender","FY14Giving.Grouped","FY13Giving.Grouped","FY12Giving.Grouped")
 pred.list<-c("[0-1)","[1-100)","[100-250)","[250-500)","[500-200000)" )
 newData <- unique(givings[,var.list])
-#predicts<-cbind(newData, predict(model_B1j, newdata=newData, )$fit)
 predicts<-cbind(newData, predict(model2_Ha, newdata=newData, type = 'class'))
 predicts<- merge(predicts,givings,by=var.list)
-
-
-(results.t <- xtabs(~ FY16Giving.Grouped, data = predicts[(predicts$fit == predicts$FY16Giving.Grouped),]))
+results.t <- xtabs(~ FY16Giving.Grouped, data = predicts[(predicts$fit == predicts$FY16Giving.Grouped),])
 round(results.t / xtabs(~ FY16Giving.Grouped, data = givings),2)
 ```
 
