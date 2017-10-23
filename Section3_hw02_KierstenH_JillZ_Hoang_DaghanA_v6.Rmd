@@ -604,6 +604,65 @@ odds_ratio(c4)
 odds_ratio(c5)
 ```
 
+# ORDINAL REGRESSION
+
+The estimated model is:
+
+$$ logit(\hat{P}(Y\leq j)) = \hat{\beta}_{j0} + 0.07Married + 0.27Attended + 1.21FY15Giving \ ... + 2.10FY12Giving.Grouped $$
+
+where $\hat{beta}_{10} = 2.73, \hat{beta}_{20} = 4.38, \hat{beta}_{30} = 6.82, \hat{beta}_{40} = 8.21$
+
+To fit the model, we use the model using the $clm$ function below:
+
+```{r}
+model_B1j <- clm(formula = FY16Giving.Grouped ~ Married + Adv.Deg + Gender + AttendenceEvent + High.Donor.Major + FY15Giving.Grouped + FY14Giving.Grouped +FY13Giving.Grouped + FY12Giving.Grouped, data =givings, link ="logit")
+```
+
+# INDEPENDENCE
+
+We test for independence among the variables using the Anova function, with:
+
+$$H_0 : \beta_2 = \beta_3 = ... \beta_22 = 0$$
+$$H_a : any \ \beta_i \neq 0$$
+
+From the test, we find that there is strong evidence that association exists for all variables except for AttendenceEvent and High.Donor.Major.
+
+```{r}
+Anova(model_B1j)
+```
+
+# CONFIDENCE INTERVAL
+
+We derive the confidence intervals for the Odds Ratios to determine the significance and impact of the variables within our model:
+
+```{r}
+## model_polr = polr(formula = FY16Giving.Grouped ~ Married + Adv.Deg + Gender + AttendenceEvent + High.Donor.Major + FY15Giving.Grouped + FY14Giving.Grouped +FY13Giving.Grouped + FY12Giving.Grouped, data =givings, method ="logistic")
+
+## conf.beta = confint(object = model_polr, level = 0.95)
+## ci.ord = exp(conf.beta) # inverted coefficients to assess responses at or ABOVE a certain level
+## round(data.frame(low = ci.ord[,2], up = ci.ord[,1]), 2)
+
+conf.beta <- confint(object = model_B1j , level = 0.95)
+conf.beta <- as.data.frame.matrix(conf.beta)
+conf.beta[,3]<-model_B1j$coefficients[5:26];colnames(conf.beta)[3] = "estimated"
+round(conf.beta,2)
+round(exp(conf.beta),2)
+
+```
+
+The table above details the range of Odds Ratios for any given variable compared with its base, holding all other variables constant. For example, with 95% confidence* the odds of an alumni donating above a given donation bracket is .72 to 1.36 times when they are married than when they are not. The most notable trend is among the previous Fiscal Year donations, as there are increasing Odds for a donation for alumni who donated in higher donation brackets in previous years. Specifically, we see that if an alumni donated in the highest bracket (500-200000) in FY15, his/her odds of donating above a given bracket are 39 to 417 times compared to if he/she did not donate in FY15. This trend holds true for all previous Fiscal Years, although to a lesser extent the less recent the donation year.
+
+A few addition variable interpretations:
+
+- The odds of donating above a certain bracket are between .51 to 1.26 times as large when the alumni had a bachelor or equivalent degree versus no advanced degree. This range is reduced to .34 to .89 times as large when the alumni had above a bachelor degree compared to no advanced degree.
+- The odds of donating above a certain bracket are between .85 to 1.54 times as large when the alumni was a male compared to female.
+- The odds of donating above a certain bracket are between .94 and 1.80 times as large when the alumni attended at least one event compared to not attending any events.
+- The odds of donating above a certain bracket are between .74 to 1.40 times as large when the alumni majored in what we categorized as a 'High Donor' major compared to other majors.
+
+We notice that many of the variables include 1 within the 95% confidence interval. This suggests that there is not sufficient evidence to indicate that these variables increase the odds of donating. However, through our EDA and logical assessment, many of these variables can be key contributers and also add information to other variables in the model, thus we chose to keep them.
+
+*95% confidence is defined in the frequentist perspective, meaning given 100 samples drawn from the same population, we can expect 95 of the samples to have a 95% confidence interval that contains the true population parameter.
+
 
 ##4 Final Remarks
 
