@@ -40,7 +40,7 @@ sum(is.na(givings))
 
 When we conducted a cursory examination, we found that there are 1000 observations and twelve variables in the dataset (five variables are donations in years 2012-2016). There were no missing values for any of the variables in the dataset. 
 
-Donations made in the 2016 fiscal year is our dependent variable. We were provided donations for 5 years as continuous variables. The minimum donation is $0 and the maximum donation is $161 500 (made in 2013).
+Donations made in the 2016 fiscal year is our dependent variable. We were provided donations for 5 years as continuous variables. The minimum donation is $0 and the maximum donation is $161,500 (made in 2013).
 We were provided Gender and Attendence.Event as a binary variables. Furthermore, we were provided Marital.Status as a factor with four levels (D, M, S, W), which we interpret as divorced, married, single, and windowed. Our data set includes graduating class year with five categories each ten years apart (1972, 1982, 1992, 2002, 2012). We were also provided with educational information for alumni; Alumni Major was provides in 45 categories, and information about their next degree was provided with 47 categories.
 
 ##2.2 Data Cleaning
@@ -144,7 +144,6 @@ givings$Adv.Deg <-fct_collapse(givings$Next.Degree,
                                bachelor_equivalent = c("AA","BA","BAE","BD","BFA","BN","BS","BSN","LLB","LLD","NDA","UBDS","UDDS","UMD","UMDS","UNKD","TC"), 
                                above_bachelor= c("DC","DDS","DMD","DO","DO2","DP","JD","PHD","MA","MA2","MAE","MALS","MAT","MBA","MCP","MD","MD2","ME", "MFA","MHA","ML","MLS","MM","MPA","MPH","MS","MSM","MSW","STM"))
 ```
-The Next.Degree as a factor variable is too scathered. Many levels only have a single count (ex: MA2, MALS, MSM, BD, etc). We will group donor into 3 catories;  those without a next degree (None), those with a bachelor equivalent and those with a degree higher than bachelor.  
 
 ###2.3.7 AttendenceEvent
 Surprisingly, 40% of graduates have attended at least one Alumni event organized between 2012 and 2015. Intuitively, we expect a high correlation between this variable and donations (if alumni support, or are enthusiastic about their, they are more likely to donate) so we included this variable in our analysis and modeling.
@@ -165,7 +164,7 @@ We are examined the relationship between the following sets of variables:
 * Class.Year vs. AttendenceEvent
 
 ###2.4.1 FY16Giving.Grouped vs. Gender
-We note two interesting observations in table 1. First, there are more donations in the [$500-$200K) bracket than the [$250-$500) bracket. Furthermore, at $100 donation level or above, men consistently donate more than women do.
+We note two interesting observations. First, there are more donations in the [$500-$200K) bracket than the [$250-$500) bracket. Furthermore, at $100 donation level or above, men consistently donate more than women do.
 
 ```{r fig.height= 1.5}
 (t1 <- xtabs(~ Gender + FY16Giving.Grouped , data = givings))
@@ -173,11 +172,7 @@ We note two interesting observations in table 1. First, there are more donations
 ```
 
 ###2.4.2 FY16Giving.Grouped vs. Class.Year
-There are 3 key insights from table 2 below:
-
-1. Older alumni make disproportionately larger donations (15% of the Class of 72 made $500 + donations).  
-2. A higher percentage of the older alumni make donations ($0 donations is only 48% for the class of 1972, versus 66% for the class of 2012).   
-3. But there are more recent graduates, perhaps in part because their current addresses still valid. So even as their ratio is lower, most of the $1-$100 donations come from the class of 2012.  
+There are 3 key insights: 1. Older alumni make disproportionately larger donations (15% of the Class of 72 made $500 + donations). 2. A higher percentage of the older alumni make donations ($0 donations is only 48% for the class of 1972, versus 66% for the class of 2012). 3. But there are more recent graduates, perhaps in part because their current addresses still valid. So even as their ratio is lower, most of the $1-$100 donations come from the class of 2012.  
 
 ```{r}
 (t2 <- xtabs(~ Class.Year + FY16Giving.Grouped , data = givings))
@@ -216,7 +211,7 @@ round(t18/rowSums(t18),2)
 ```
 
 
-###2.4.5 FY16Giving.Grouped vs. Next.Degree
+###2.4.5 FY16Giving.Grouped vs. Next.Degree (Adv.Deg)
 A higher proportion of people with above_bachelor degree make top donations ($500 or more), compared to other groups.
 ```{r}
 t12<-xtabs(~Adv.Deg+FY16Giving.Grouped, data= givings)
