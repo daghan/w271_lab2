@@ -303,7 +303,6 @@ t(t9)
 t(round(t9/rowSums(t9),2))
 ```
 
-
 ###2.4.13 Class.Year vs. AttendenceEvent
 It is remarkable that graduates from 1972 have the same (~60%) attendance rate as the class of 2012. Of note, the Class of 2002 has an usual spike in attendance, but we cannot explain it with the information available to us.
 
@@ -312,7 +311,6 @@ t10 <- xtabs(~ Class.Year + AttendenceEvent, data = givings)
 t(t10)
 t(round(t10/rowSums(t10),2))
 ```
-
 
 ##2.5 Interactions
 ### 2.5.1 Gender, Class.Year, 2016 Donations
