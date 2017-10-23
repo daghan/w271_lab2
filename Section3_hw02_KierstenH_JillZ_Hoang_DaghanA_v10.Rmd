@@ -21,9 +21,11 @@ For several reasons supported by our EDA (below), we modeled donation level as a
 2. After completing multiple levels of EDA, we found key trends and nuances in the data that we used for modeling
 3. We compared 3 models on their alignment with our EDA, goodness of fit, and logical real-world structure, and ultimately chose a final model that exceled in all three of these aspects.
 
-Our final model is:
+The final model we estimated is:
 
-# PASTE FINAL MODEL HERE #
+$$ logit(\hat{P}(Y\leq j)) = \hat{\beta}_{j0} + 0.07Married + 0.27Attended + 1.21FY15Giving \ ... + 2.10FY12Giving.Grouped $$
+
+where $\hat{beta}_{10} = 2.73, \hat{beta}_{20} = 4.38, \hat{beta}_{30} = 6.82, \hat{beta}_{40} = 8.21$
 
 This model primarily consists of previous years' donations, as we found they were the best predictors of donating in the current year. Fundraising professionals typically consider an individual's wealth (ability to give) and enthusiasm for giving when they consider who might be the most likely, loyal, and generous donors to a particular cause. For this reason, we included Advanced Degree as a potential indicator of wealth (those individuals with graduate degrees frequently have higher incomes). In addition, we grouped majors together according to level of donations typically made by donors from each major. We also considered enthusiasm for and support of the university which was evident if an alumnus had attended a university event, thus we included Event Attendence as well. In addition, we found in our EDA that Gender and Marital Status contributed to identifying the philanthropic behavior towards the University and we thus included Gender and Marital status when we estimated our model.
 
@@ -431,13 +433,7 @@ Looking at the top donors from Majors that have usually high donation levels, we
 
 ##3 Statistical Modeling 
 
-Start the section summarizing the key results - what variables, if
-any, are the key predictors of the year 2016 contribution? What are the key techniques you have
-experimented? What method did you use in your final model? How did you choose the final model?
-What model performance criteria did you use to choose the final model? What statistical infernece did
-you perform? Explain them. Comment on statistical significance vs. economic significance.
-
--list variables included
+#Summary
 
 
 The final model we estimated is:
@@ -445,16 +441,64 @@ The final model we estimated is:
 $$ logit(\hat{P}(Y\leq j)) = \hat{\beta}_{j0} + 0.07Married + 0.27Attended + 1.21FY15Giving \ ... + 2.10FY12Giving.Grouped $$
 where $\hat{beta}_{10} = 2.73, \hat{beta}_{20} = 4.38, \hat{beta}_{30} = 6.82, \hat{beta}_{40} = 8.21$
 
-We found that past years giving is the key predictor for 2016 contributions. There are increasing Odds of donation for alumni who previously donated in high donation brackets. This trend applies to all previous Fiscal Years, but more so to the more recent donation years. However, to as lesser extent Gender, Major and 
+We found that past years giving is the key predictor for 2016 contributions. There are increasing Odds of donation for alumni who previously donated in high donation brackets. This trend applies to all previous Fiscal Years, but more so to the more recent donation years. However, to as lesser extent Gender, being in high donation Major category, and attendance of events increased the odds of 2016 contribution.
 
-
--performance criteria
-
--statistical inference we performed
-
--stats significance versus economic significance
+#Modeling Process
 
 Based on our exploratory data analysis we decided to include most of the variables provided in the dataset as explanatory variables while estimating our model. These included all years of FYGiving.Grouped (2012-2015), our categorical variable of Married, AttendenceEvent, Major.Donation.Level, Adv.Deg,Gender, and as described below we originally included Class.Year, but removed it from the model due to poor model fit.
+
+
+#Ordinal versus Nominal Multinomial model?
+
+We noted that there was a natural order to ....
+
+When reviewing each Independent Variable, we found that their odds ratios were relatively similar across the different levels of the response variable FY16Giving.Grouped. This provided additional justification for estimating an Ordinal model.
+
+```{r}
+c1 <- xtabs(~Gender+FY16Giving.Grouped, data=givings)
+c2 <- xtabs(~Marital.Status+FY16Giving.Grouped, data=givings)
+c3 <- xtabs(~Class.Year+FY16Giving.Grouped, data=givings)
+c4 <- xtabs(~Major.Donation.Level+FY16Giving.Grouped, data=givings)
+c5 <- xtabs(~AttendenceEvent+FY16Giving.Grouped, data=givings)
+
+odds_ratio <- function(r1){
+  df1 <- as.data.frame.matrix(r1)
+  n <- dim(df1)[1]
+  len <- dim(df1)[2]
+  odds = data.frame(matrix(0, n, len-1))
+  colnames(odds) <- colnames(df1)[1:len-1]
+
+  for( i in seq(1,len-1)){
+    if(i==1) {
+      lowerp <- df1[,1]
+    }else {
+      lowerp <- rowSums(df1[,1:i])
+    }
+    if(i==len-1) {
+      upperp <- df1[,len]
+    } else {
+      upperp<-rowSums(df1[,(i+1):len])
+    }
+    odds[,i] <- lowerp/upperp
+  }
+  round(odds,2)
+
+  oratio <- data.frame(matrix(0, n-1, len-1),row.names = rownames(df1)[2:n])
+  colnames(oratio)<- colnames(odds)
+  for(j in seq(1,n-1)) oratio[j,] <- odds[j+1,]/odds[j,]
+  return(round(oratio,2))
+}
+#Gender
+odds_ratio(c1)
+#Marital Status
+odds_ratio(c2)
+#Graduating class
+odds_ratio(c3)
+#Major
+odds_ratio(c4)
+#Addent Event
+odds_ratio(c5)
+```
 
 In analysis we do not show for brevity, we identified that FY15Giving.Grouped had the highest in-model explanatory power of all explanatory variables by themselves (the lowest AIC and it was statistically significant). Thus, we chose model_B1a as our "base model" to use during hypothesis testing.
 
@@ -521,54 +565,7 @@ round(exp(conf.beta),2)
 
 
 
-#3 Should we chose an Ordinal or Nominal Multinomial model?
 
-
-```{r}
-c1 <- xtabs(~Gender+FY16Giving.Grouped, data=givings)
-c2 <- xtabs(~Marital.Status+FY16Giving.Grouped, data=givings)
-c3 <- xtabs(~Class.Year+FY16Giving.Grouped, data=givings)
-c4 <- xtabs(~Major.Donation.Level+FY16Giving.Grouped, data=givings)
-c5 <- xtabs(~AttendenceEvent+FY16Giving.Grouped, data=givings)
-
-odds_ratio <- function(r1){
-  df1 <- as.data.frame.matrix(r1)
-  n <- dim(df1)[1]
-  len <- dim(df1)[2]
-  odds = data.frame(matrix(0, n, len-1))
-  colnames(odds) <- colnames(df1)[1:len-1]
-
-  for( i in seq(1,len-1)){
-    if(i==1) {
-      lowerp <- df1[,1]
-    }else {
-      lowerp <- rowSums(df1[,1:i])
-    }
-    if(i==len-1) {
-      upperp <- df1[,len]
-    } else {
-      upperp<-rowSums(df1[,(i+1):len])
-    }
-    odds[,i] <- lowerp/upperp
-  }
-  round(odds,2)
-
-  oratio <- data.frame(matrix(0, n-1, len-1),row.names = rownames(df1)[2:n])
-  colnames(oratio)<- colnames(odds)
-  for(j in seq(1,n-1)) oratio[j,] <- odds[j+1,]/odds[j,]
-  return(round(oratio,2))
-}
-#Gender
-odds_ratio(c1)
-#Marital Status
-odds_ratio(c2)
-#Graduating class
-odds_ratio(c3)
-#Major
-odds_ratio(c4)
-#Addent Event
-odds_ratio(c5)
-```
 
 # ORDINAL REGRESSION
 
@@ -664,39 +661,26 @@ plot_grid(plots3[[1]],plots3[[2]],ncol = 2)
 
 ##4 Final Remarks
 
-After examining the data and using the data to build a predictive model,
-what are your departing thoughts? What are the strengths and weaknesses in your analysis? Should
-the administration trust your result? Are there subsample in your sample that your model did a bad
-job in predicting their contribution behavior? If so, why? Are there other “things”, a wish list, that you
-think can be used to improve your model? If so, what are they? Perhaps you can make a suggestion to
-the administration to collect those information in the future.
+
+Through our analysis we've found multiple variables in the data that correlate with, and help predict, donation levels from alumni. Although our model fits the data well, we've identified a few areas that should be noted:
+
+1. Our model leverages previous years' donations as a primary predictor of the level of donation for the current year. For the majority of alumni, this works well as we have data from previous years. For new alumni, however, this variable will be missing for a certain number of years. We have found, however, that the further back the donation data goes, the less predictive power it provides, thus this is well mitigated. It would still be beneficial to ensure we have as much historical data on alumni donation as possible, so as to make full use of our model.
+
+2. There are certain subcategories of variables (e.g. Widowed in the Marital Status variable, certain majors in the Major variable, etc.) that have very little data. For our analysis, we've elected to group these variables (as in the Major.Grouped specification), which works well, but it is likely that having additional observations in these subcategories would help fit a better model. We understand this is not a controllable input, but we are highlighting it here for awareness.
+
+3. Comparing the predictions from our model with the actual donation levels in FY16, we find that our predictions are far more accurate for the lowest and highest tiers of donations. This is likely because there is greater variability in the intermediate level, whereas the relationships are much stronger as you look at the extremes. In our scenario, this actually works well because a large percentage of the total donations are weighted toward the higher donation tiers, which mean that accurately predicting alumni in these tiers are more important than other tiers. Additionally, accurately predicting those who will not donate is also helpful so the administration can allocate their outreach accordingly.
+
+4. We approached this analysis with an in-sample EDA and model assessment as we wanted to leverage as much of the data in our analysis as possible, knowing that additional data from next year would be relatively easy to attain and test on. Given a larger sample, we would be more comfortable splitting the data in to a training and testing sample, especially given the small subcategories from the variables mentioned in the previous point.
+
+As with most analyses, more data can lead to better models, but we've analyzed the existing data set and developed a model which we think fits the data and will predict the level of donations well. We recommend the administration leverage this model to predict FY17 Donation levels and check it against the actuals to confirm the model's accuracy, particularly on the highest level donations.
+
+We do, however, note that fundraising professionals typically make use of datasets that include some measure of wealth. Rather than use proxies for wealth (like Next Degree and high donor Major category for example), we recommend that the Univeristy obtain actual income level information for alumni. If this is not possible, there are other ways fundraisers commonly use to estimate wealth that include estimating potential donors' home values using donor's home addresses - people who own $2 million dollars or more in real estate are 17 times more likely donate to a nonprofit than the average person (www.bidpal.com/identifying-major-donors-top-strategies-tools). By identifying wealthy alumni, the University could invite them to "VIP University Events" and cultivate relationships with these donors that tend to result in larger donations.
 
 
--departing thoughts
--strengths weakness in analysis
--admin trust result?
--subsample that model did a bad job predicting
--wish list of things to improve model
-
-I dumped this here, i'll synthesize/streamline
-
-For future: data we wished we had:
-
-Wealth indicators: 
-www.bidpal.com/identifying-major-donors-top-strategies-tools
-
--self-reported household income
-
--real estate ownership
--people who own $2 million dollars or more in real estate are 17 times more likely donate to a nonprofit than the average person. Can use the individuals home address and use website such as Zillow to estimate donor's property value.
 
 
--use information to cultivate relationships with possible future major donors (invite possible donors to attend more high-end University events) 
 
--Apparently spending habits at charity auctions can be used to determine who might be a major donor- because it is an indication of how wealthy someone might be. Therefore if any of the University Events were are auctions, we would request the auction bidding data from the University to help identify potential major donors.  
 
-Past political giving:
--past charitable giving (for instance political contributions, which is publicly accessible) are good indicators of who could become a major donor to the University. Political gifts indicate a willingness to donate, an interest in philanthropy, and the capacity to give in terms of wealth.
 
 
 
