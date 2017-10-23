@@ -456,8 +456,12 @@ We test for independence among the variables using the Anova function, with:
 $$H_0 : \beta_2 = \beta_3 = ... \beta_p = 0$$
 $$H_a : any \ \beta_i \neq 0$$
 From the likelihood ratio test, we find that there is strong evidence that association exists for all variables except for AttendenceEvent and Major.Donor.Level.
-```{r, results='asis'}
+
+```{r}
 Anova(model2_Ha)
+```
+
+```{r, results='asis'}
 stargazer(model_Ho,model1_Ha,model2_Ha,star.cutoffs = c(0.05, 0.01, 0.001))
 ```
 
